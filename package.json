@@ -1,4 +1,4 @@
-{
+json{
   "name": "family-calendar-2026",
   "private": true,
   "version": "1.0.0",
@@ -11,7 +11,8 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "lucide-react": "^0.263.1"
+    "lucide-react": "^0.263.1",
+    "firebase": "^10.7.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
