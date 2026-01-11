@@ -1,5 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X, Plus } from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAqyIg5WNJUYpgI338DAdxqMLkSB_7Vrlk",
+  authDomain: "family-calendar-2026-6baf2.firebaseapp.com",
+  projectId: "family-calendar-2026-6baf2",
+  storageBucket: "family-calendar-2026-6baf2.firebasestorage.app",
+  messagingSenderId: "496454895356",
+  appId: "1:496454895356:web:8265e1667dcf1a34bbf979"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const PEOPLE = {
   Kami: { color: 'bg-rose-400', text: 'text-rose-700', light: 'bg-rose-100', border: 'border-rose-400' },
@@ -13,18 +27,27 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function App() {
   const [currentMonth, setCurrentMonth] = useState(0);
-  const [notes, setNotes] = useState(() => {
-    const saved = localStorage.getItem('familyCalendarNotes');
-    return saved ? JSON.parse(saved) : {};
-  });
+  const [notes, setNotes] = useState({});
   const [selectedDate, setSelectedDate] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [newNote, setNewNote] = useState({ person: 'Kami', text: '' });
+  const [loading, setLoading] = useState(true);
   const year = 2026;
 
   useEffect(() => {
-    localStorage.setItem('familyCalendarNotes', JSON.stringify(notes));
-  }, [notes]);
+    const unsubscribe = onSnapshot(doc(db, 'calendar', 'notes'), (docSnap) => {
+      if (docSnap.exists()) {
+        setNotes(docSnap.data().notes || {});
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const saveNotes = async (newNotes) => {
+    setNotes(newNotes);
+    await setDoc(doc(db, 'calendar', 'notes'), { notes: newNotes });
+  };
 
   const getDaysInMonth = (month) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (month) => new Date(year, month, 1).getDay();
@@ -41,13 +64,15 @@ export default function App() {
   const addNote = () => {
     if (!newNote.text.trim()) return;
     const key = getDateKey(selectedDate);
-    setNotes((prev) => ({ ...prev, [key]: [...(prev[key] || []), { ...newNote, id: Date.now() }] }));
+    const newNotes = { ...notes, [key]: [...(notes[key] || []), { ...newNote, id: Date.now() }] };
+    saveNotes(newNotes);
     setNewNote({ person: 'Kami', text: '' });
   };
 
   const deleteNote = (noteId) => {
     const key = getDateKey(selectedDate);
-    setNotes((prev) => ({ ...prev, [key]: prev[key].filter((n) => n.id !== noteId) }));
+    const newNotes = { ...notes, [key]: notes[key].filter((n) => n.id !== noteId) };
+    saveNotes(newNotes);
   };
 
   const renderCalendarDays = () => {
@@ -73,6 +98,10 @@ export default function App() {
     }
     return days;
   };
+
+  if (loading) {
+    return <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center"><div className="text-xl text-gray-600">Loading calendar...</div></div>;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 p-4">
